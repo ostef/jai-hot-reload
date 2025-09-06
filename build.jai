@@ -40,11 +40,23 @@ HandleDeclarationForGlobalPersistent :: (decl : *Code_Declaration) {
 }
 
 GenerateGlobalPersistentCode :: (workspace : Workspace) {
+    #import "Sort";
+
     if g_global_persistent_generated {
         return;
     }
 
     defer g_global_persistent_generated = true;
+
+    // Make sure things always get generated in the same order
+    quick_sort(g_global_persistent, (a : GlobalPersistent, b : GlobalPersistent) -> int {
+        cmp := compare_strings(a.type.name, b.type.name);
+        if cmp == 0 {
+            cmp = compare_strings(a.identifier, b.identifier);
+        }
+
+        return cmp;
+    });
 
     builder : String_Builder;
     print_to_builder(*builder, "Global_Persistent :: GlobalPersistent.[\n");
