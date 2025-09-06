@@ -52,11 +52,10 @@ AssetsState :: struct {
 
 // You get the idea...
 
+// Only called once, not called when reloaded
 Initialize :: () -> EngineModuleResult {
     g_context = remap_context();
     push_context,defer_pop g_context;
-
-    log("Game default allocator heap: %", allocator_default_heap);
 
     g_state.g_window = SDL_CreateWindow("Hot Reloaded Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1920, 1080, 0);
 
@@ -65,6 +64,7 @@ Initialize :: () -> EngineModuleResult {
     return .{};
 }
 
+// Only called once, not called when unloaded
 Shutdown :: () {
     push_context,defer_pop g_context;
 
@@ -90,15 +90,12 @@ MainLoop :: () -> EngineModuleResult {
 #program_export
 ModuleHandshake :: (module : *EngineModule, state : **void, state_size : *s64) -> bool #c_call {
     push_context {
-        log("Game default allocator heap: %", allocator_default_heap);
-
         module.initialize = Initialize;
         module.shutdown = Shutdown;
         module.main_loop = MainLoop;
 
         if !state.* {
             state.* = New(GlobalState);
-            log("Game default allocator heap: %", allocator_default_heap);
             state_size.* = size_of(GlobalState);
         } else if state_size.* != size_of(GlobalState) {
             log_error("Detected a change in the memory layout of the game");

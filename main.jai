@@ -84,6 +84,8 @@ UnloadGameModule :: () {
         if file_exists(lib_path) {
             file_delete(lib_path);
         }
+
+        log("Unloaded game module %", lib_path);
     }
 }
 
@@ -91,14 +93,10 @@ main :: () {
     exit_code : s32;
     defer exit(exit_code);
 
-    log("Loader default allocator heap: %", allocator_default_heap);
-
     if !LoadGameModule() {
         exit_code = 1;
         return;
     }
-
-    log("Loader default allocator heap: %", allocator_default_heap);
 
     defer UnloadGameModule();
 
@@ -116,7 +114,7 @@ main :: () {
 
     init(*g_modules_watcher, ModulesChangeCallback);
     defer deinit(*g_modules_watcher);
-    add_directories(*g_modules_watcher, ".");
+    add_directories(*g_modules_watcher, "Libs");
 
     while true {
         process_changes(*g_modules_watcher);
