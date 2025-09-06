@@ -31,7 +31,15 @@ GlobalState :: struct {
     }
 }
 
-g_state : *GlobalState; // @CompilerBug: if I add a using the compiler complains about a circular dependency
+// @Hack
+// When declaring g_state directly we have a circular dependency
+// We need to wait on GlobalState first, hence the #insert
+#insert -> string {
+    state : *GlobalState; // Make sure the compiler understands that we want GlobalState to be typechecked before
+
+    return "using g_state : *GlobalState;";
+}
+
 g_context : #Context;
 
 EditorState :: struct {
