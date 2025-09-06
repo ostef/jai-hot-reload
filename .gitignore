@@ -1,0 +1,6 @@
+.build/
+Libs/
+
+*.pdb
+*.exe
+main
