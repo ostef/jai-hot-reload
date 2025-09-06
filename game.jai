@@ -81,6 +81,10 @@ Shutdown :: () {
     SDL_DestroyWindow(g_state.g_window);
 }
 
+OnReload :: () {
+    push_context,defer_pop g_context;
+}
+
 MainLoop :: () -> EngineModuleResult {
     push_context,defer_pop g_context;
 
@@ -100,6 +104,7 @@ ModuleHandshake :: (module : *EngineModule, state : **void, state_size : *s64) -
     push_context {
         module.initialize = Initialize;
         module.shutdown = Shutdown;
+        module.on_reload = OnReload;
         module.main_loop = MainLoop;
 
         if !state.* {

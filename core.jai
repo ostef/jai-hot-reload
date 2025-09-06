@@ -5,6 +5,7 @@
 EngineModule :: struct {
     initialize : () -> EngineModuleResult;
     shutdown : ();
+    on_reload : ();
     main_loop : () -> EngineModuleResult;
 }
 

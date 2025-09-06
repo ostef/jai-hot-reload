@@ -59,6 +59,7 @@ LoadGameModule :: () -> bool {
         return false;
     }
 
+    first_load := g_game_library == null;
     UnloadGameModule();
 
     log("Loaded game module %", dst_lib_path);
@@ -68,6 +69,10 @@ LoadGameModule :: () -> bool {
     g_game_library = library;
     g_version += 1;
     g_game_module_load_failed = false;
+
+    if !first_load {
+        g_game_module.on_reload();
+    }
 
     return true;
 }
