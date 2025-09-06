@@ -108,7 +108,7 @@ BuildLoader :: () {
 
     options := get_build_options(ws);
     options.output_type = .EXECUTABLE;
-    options.output_executable_name = "main";
+    options.output_executable_name = "Game";
     options.import_path = get_build_options().import_path;
     options.Commonly_Propagated = get_build_options().Commonly_Propagated;
     options.write_added_strings = true;
@@ -118,7 +118,7 @@ BuildLoader :: () {
 
     compiler_begin_intercept(ws);
 
-    add_build_file("main.jai", ws);
+    add_build_file("loader.jai", ws);
 
     while true {
         msg := compiler_wait_for_message();
