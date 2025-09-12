@@ -138,8 +138,13 @@ CompareFileTimes :: (a : string, b : string) -> bool {
 }
 
 Build :: () {
+    auto_detect : bool;
+    build_core : bool;
+    build_renderer : bool;
+    build_game : bool;
+
     start_time := current_time_monotonic();
-    defer {
+    defer if build_core || build_renderer || build_game {
         end_time := current_time_monotonic();
         total_time := end_time - start_time;
         print("  Total time: % seconds\n", to_float64_seconds(total_time));
@@ -149,11 +154,6 @@ Build :: () {
 
     args := get_build_options().compile_time_command_line;
     arg_index := 0;
-
-    auto_detect : bool;
-    build_core : bool;
-    build_renderer : bool;
-    build_game : bool;
 
     while arg_index < args.count {
         defer arg_index += 1;
