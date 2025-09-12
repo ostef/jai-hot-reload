@@ -17,9 +17,11 @@ Module :: struct {
     Shutdown : ();
     MainLoop : ();
     OnEvent : (event : SDL_Event);
+    SaveState : () -> []u8;
+    LoadState : (state : []u8);
 
     OnModuleUnload : (id : ModuleID);
-    OnModuleReload : (id : ModuleID);
+    OnModuleLoad : (id : ModuleID);
 }
 
 ModuleHandshakeProc :: #type (core : *CoreModule) -> *Module #c_call;

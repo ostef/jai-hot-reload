@@ -24,6 +24,26 @@ g_module_libraries : [Num_Modules]*void;
 g_modules : [Num_Modules]*Module;
 g_modules_watcher : File_Watcher;
 
+ReloadModule :: (id : ModuleID) -> bool {
+    state : []u8;
+    if g_modules[id].SaveState {
+        state = g_modules[id].SaveState();
+        log("Saved state for module %", id);
+    }
+
+    UnloadModule(id);
+    if !LoadModule(id) {
+        return false;
+    }
+
+    if g_modules[id].LoadState {
+        g_modules[id].LoadState(state);
+        log("Restored state for module %", id);
+    }
+
+    return true;
+}
+
 LoadModule :: (id : ModuleID) -> bool {
     handshake : ModuleHandshakeProc;
 
@@ -66,8 +86,8 @@ LoadModule :: (id : ModuleID) -> bool {
     }
 
     for g_modules {
-        if it && it.OnModuleReload {
-            it.OnModuleReload(id);
+        if it && it.OnModuleLoad {
+            it.OnModuleLoad(id);
         }
     }
 
@@ -104,8 +124,7 @@ ModulesChangeCallback :: (watcher : *File_Watcher(void), change : *File_Change, 
     for i : 0..Num_Modules - 1 {
         id := cast(ModuleID, i);
         if filename == tprint("%.%", id, Lib_Ext) {
-            UnloadModule(id);
-            if !LoadModule(id) {
+            if !ReloadModule(id) {
                 exit(1);
             }
         }

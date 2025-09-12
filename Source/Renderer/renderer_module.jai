@@ -8,7 +8,7 @@ Module_ID :: ModuleID.Renderer;
 g_module := RendererModule.{
     Initialize=InitializeRenderer,
     Shutdown=ShutdownRenderer,
-    OnModuleReload=OnModuleReload,
+    OnModuleLoad=OnModuleLoad,
 
     WaitForRenderThread=WaitForRenderThread,
     AddMeshToRender=AddMeshToRender,
@@ -16,7 +16,7 @@ g_module := RendererModule.{
     AddPointLightToRender=AddPointLightToRender,
 };
 
-OnModuleReload :: (id : ModuleID) {
+OnModuleLoad :: (id : ModuleID) {
     if id == Module_ID {
         g_context = remap_context();
     }
@@ -31,7 +31,6 @@ ModuleHandshake :: (core : *CoreModule) -> *Module #c_call {
 g_context : #Context;
 
 InitializeRenderer :: () {
-    g_context = remap_context();
     push_context,defer_pop g_context;
 }
 
