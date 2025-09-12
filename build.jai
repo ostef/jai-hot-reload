@@ -1,11 +1,27 @@
 #import "Basic";
 #import "String";
 #import "File";
+#import "File_Utilities";
 #import "Compiler";
 
-BuildModule :: (name : string, source_file : string, handle_compiler_message : (*Message)) {
+#load "Source/Core/build.jai";
+#load "Source/Game/build.jai";
+
+Max_Workspaces :: 20;
+
+#if OS == {
+case .WINDOWS; Lib_Ext :: "dll";
+case .LINUX;   Lib_Ext :: "so";
+case .MACOS;   Lib_Ext :: "dylib";
+}
+
+BuildModule :: (name : string, source_file : string, handle_compiler_message : (*Message) = null) {
+    compilation_failed := false;
+
     start_time := current_time_monotonic();
-    defer {
+    defer if compilation_failed {
+        log_error("Compilation failed for module %", name);
+    } else {
         end_time := current_time_monotonic();
         total_time := end_time - start_time;
         print("  Compiled module % in % seconds\n", name, to_float64_seconds(total_time));
@@ -36,6 +52,11 @@ BuildModule :: (name : string, source_file : string, handle_compiler_message : (
         }
 
         if msg.kind == .COMPLETE {
+            complete := cast(*Message_Complete, msg);
+            if complete.error_code != .NONE {
+                compilation_failed = true;
+            }
+
             break;
         }
     }
@@ -44,8 +65,12 @@ BuildModule :: (name : string, source_file : string, handle_compiler_message : (
 }
 
 BuildCoreLoader :: () {
+    compilation_failed := false;
+
     start_time := current_time_monotonic();
-    defer {
+    defer if compilation_failed {
+        log_error("Compilation failed for loader");
+    } else {
         end_time := current_time_monotonic();
         total_time := end_time - start_time;
         print("  Compiled loader in % seconds\n", to_float64_seconds(total_time));
@@ -69,16 +94,47 @@ BuildCoreLoader :: () {
 
     while true {
         msg := compiler_wait_for_message();
-        // if msg.workspace == ws {
-        //     CoreHandleCompilerMessage(msg);
-        // }
+        if msg.workspace == ws {
+            HandleCompilerMessageForCore(msg);
+        }
 
         if msg.kind == .COMPLETE {
+            complete := cast(*Message_Complete, msg);
+            if complete.error_code != .NONE {
+                compilation_failed = true;
+            }
+
             break;
         }
     }
 
     compiler_end_intercept(ws);
+}
+
+CompareFileTimes :: (a : string, b : string) -> bool {
+    a_modtime, _, a_exists := file_modtime_and_size(a);
+    if !a_exists {
+        return true;
+    }
+
+    if !is_directory(b) {
+        b_modtime, _, b_exists := file_modtime_and_size(b);
+        if !b_exists {
+            return true;
+        }
+
+        return a_modtime < b_modtime;
+    } else {
+        files := file_list(b, recursive=true);
+        for files {
+            modtime := file_modtime_and_size(it);
+            if a_modtime < modtime {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 Build :: () {
@@ -94,6 +150,7 @@ Build :: () {
     args := get_build_options().compile_time_command_line;
     arg_index := 0;
 
+    auto_detect : bool;
     build_core : bool;
     build_renderer : bool;
     build_game : bool;
@@ -102,6 +159,8 @@ Build :: () {
         defer arg_index += 1;
 
         if args[arg_index] == {
+        case "-auto";
+            auto_detect = true;
         case "-core";
             build_core = true;
         case "-renderer";
@@ -118,19 +177,26 @@ Build :: () {
         }
     }
 
-    if !build_core && !build_renderer && !build_game {
+    if !auto_detect && !build_core && !build_renderer && !build_game {
         log_error("Nothing to build");
         exit(1);
+    }
+
+    // Compare file times so we know if we should rebuild a module
+    if auto_detect {
+        build_core     ||= CompareFileTimes("main", "Source/Core") || CompareFileTimes("main", "Source/main.jai");
+        build_renderer ||= CompareFileTimes(tprint("Libs/Renderer.%", Lib_Ext), "Source/Renderer");
+        build_game     ||= CompareFileTimes(tprint("Libs/Game.%", Lib_Ext), "Source/Game");
     }
 
     if build_core {
         BuildCoreLoader();
     }
     if build_renderer {
-        BuildModule("Renderer", "Source/Renderer/renderer.jai", null);
+        BuildModule("Renderer", "Source/Renderer/renderer.jai", HandleCompilerMessageForCore);
     }
     if build_game {
-        BuildModule("Game", "Source/Game/game.jai", null);
+        BuildModule("Game", "Source/Game/game.jai", HandleCompilerMessageForGame);
     }
 }
 

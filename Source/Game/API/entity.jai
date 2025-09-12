@@ -35,11 +35,15 @@ EntityVTable :: struct {
     GetEditorIcon : (world : *World, entity : *Entity) -> *Asset(Texture2D);
 }
 
-Entity_Types :: Type.[];
-
 Entity :: struct {
     guid : [2]u64;
     local_position : Vector3;
     local_rotation : Quaternion;
     local_scale : Vector3;
 }
+
+SomeEntity :: struct {
+    #as using _ : Entity;
+
+    some_texture : *Asset(Texture2D);
+} @Entity
