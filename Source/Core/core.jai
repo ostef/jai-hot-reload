@@ -1,73 +1,65 @@
-#import "Basic";
-#import "SDL";
+#load "API/core.jai";
 
-#load "gfx.jai";
-#load "assets.jai";
+Module_ID :: ModuleID.Core;
 
-ModuleID :: enum {
-    Core;
-    Renderer;
-    Game;
+g_module := CoreModule.{
+    Initialize=InitializeCore,
+    Shutdown=ShutdownCore,
+    MainLoop=CoreLoop,
+    Quit=Quit,
+    GetModule=GetModule,
+    GetWindow=GetWindow,
+    gfx.GetGfxContext=GetGfxContext,
+    assets.GetAssets=GetAssets,
+};
+
+ModuleHandshake :: (core : *CoreModule) -> *Module #c_call {
+    return *g_module;
 }
 
-Num_Modules :: #run type_info(ModuleID).values.count;
-
-Module :: struct {
-    Initialize : ();
-    Shutdown : ();
-    MainLoop : ();
-    OnEvent : (event : SDL_Event);
-    SaveState : () -> []u8;
-    LoadState : (state : []u8);
-
-    OnModuleUnload : (id : ModuleID);
-    OnModuleLoad : (id : ModuleID);
-}
-
-ModuleHandshakeProc :: #type (core : *CoreModule) -> *Module #c_call;
-
-CoreModule :: struct {
-    #as using _ : Module;
-
-    Quit : ();
-    GetModule : (id : ModuleID) -> *Module;
-    GetWindow : () -> *SDL_Window;
-    using gfx : GfxAPI;
-    using assets : AssetsAPI;
-}
-
-#if Module_ID != .Core {
-
-g_core : *CoreModule;
-
-Quit :: inline () {
-    assert(g_core != null, "Core module is null");
-
-    g_core.Quit();
-}
+g_window : *SDL_Window;
+g_gfx_context : GfxContext;
+g_assets : Assets;
 
 GetModule :: inline (id : ModuleID) -> *Module {
-    assert(g_core != null, "Core module is null");
-
-    return g_core.GetModule(id);
+    return g_modules[id];
 }
 
 GetWindow :: inline () -> *SDL_Window {
-    assert(g_core != null, "Core module is null");
-
-    return g_core.GetWindow();
+    return g_window;
 }
 
 GetGfxContext :: inline () -> *GfxContext {
-    assert(g_core != null, "Core module is null");
-
-    return g_core.GetGfxContext();
+    return *g_gfx_context;
 }
 
 GetAssets :: inline () -> *Assets {
-    assert(g_core != null, "Core module is null");
-
-    return g_core.GetAssets();
+    return *g_assets;
 }
 
+InitializeCore :: () {
+    g_window = SDL_CreateWindow("Hot Reload", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1600, 900, 0);
+}
+
+ShutdownCore :: () {
+    SDL_DestroyWindow(g_window);
+}
+
+CoreLoop :: () {
+    event : SDL_Event;
+    while SDL_PollEvent(*event) {
+        for g_modules {
+            if it && it.OnEvent {
+                it.OnEvent(event);
+            }
+        }
+
+        if event.type == SDL_QUIT {
+            Quit();
+        }
+    }
+}
+
+Quit :: () {
+    g_quit = true;
 }

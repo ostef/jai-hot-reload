@@ -7,7 +7,7 @@
 #import "File_Utilities";
 #import "File_Watcher";
 
-#load "Core/core_module.jai";
+#load "Core/core.jai";
 
 #scope_file
 

@@ -127,10 +127,10 @@ Build :: () {
         BuildCoreLoader();
     }
     if build_renderer {
-        BuildModule("Renderer", "Source/Renderer/renderer_module.jai", null);
+        BuildModule("Renderer", "Source/Renderer/renderer.jai", null);
     }
     if build_game {
-        BuildModule("Game", "Source/Game/game_module.jai", null);
+        BuildModule("Game", "Source/Game/game.jai", null);
     }
 }
 

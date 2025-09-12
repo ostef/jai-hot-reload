@@ -1,64 +1,55 @@
-#import "Math";
+#import "Remap_Context"(VERBOSE=false);
 
-RendererModule :: struct {
-    #as using _ : Module;
+#load "../Core/API/core.jai";
+#load "API/renderer.jai";
 
-    WaitForRenderThread : ();
-    AddMeshToRender : (mesh : MeshToRender);
-    AddDirectionalLightToRender : (light : DirectionalLightToRender);
-    AddPointLightToRender : (light : PointLightToRender);
+Module_ID :: ModuleID.Renderer;
+
+g_module := RendererModule.{
+    Initialize=InitializeRenderer,
+    Shutdown=ShutdownRenderer,
+    OnModuleLoad=OnModuleLoad,
+
+    WaitForRenderThread=WaitForRenderThread,
+    AddMeshToRender=AddMeshToRender,
+    AddDirectionalLightToRender=AddDirectionalLightToRender,
+    AddPointLightToRender=AddPointLightToRender,
+};
+
+OnModuleLoad :: (id : ModuleID) {
+    if id == Module_ID {
+        g_context = remap_context();
+    }
 }
 
-#if Module_ID != .Renderer {
-
-g_renderer : *RendererModule;
-
-WaitForRenderThread :: inline () {
-    assert(g_renderer != null, "Renderer module is null");
-
-    g_renderer.WaitForRenderThread();
+#program_export
+ModuleHandshake :: (core : *CoreModule) -> *Module #c_call {
+    g_core = core;
+    return *g_module;
 }
 
-AddMeshToRender :: inline (mesh : MeshToRender) {
-    assert(g_renderer != null, "Renderer module is null");
+g_context : #Context;
 
-    g_renderer.AddMeshToRender(mesh);
+InitializeRenderer :: () {
+    push_context,defer_pop g_context;
 }
 
-AddDirectionalLightToRender :: inline (light : DirectionalLightToRender) {
-    assert(g_renderer != null, "Renderer module is null");
-
-    g_renderer.AddDirectionalLightToRender(light);
+ShutdownRenderer :: () {
+    push_context,defer_pop g_context;
 }
 
-AddPointLightToRender :: inline (light : PointLightToRender) {
-    assert(g_renderer != null, "Renderer module is null");
-
-    g_renderer.AddPointLightToRender(light);
+WaitForRenderThread :: () {
+    push_context,defer_pop g_context;
 }
 
+AddMeshToRender :: (mesh : MeshToRender) {
+    push_context,defer_pop g_context;
 }
 
-MeshToRender :: struct {
-    entity_guid : [2]u64;
-    transform : Matrix4;
-    normal_transform : Matrix3;
-    vertex_buffer : *GfxBuffer;
-    index_buffer : *GfxBuffer;
-    vertex_count : u32;
-    index_count : u32;
-    is_skinned : bool;
-    skinnined_matrices : []Matrix4;
+AddDirectionalLightToRender :: (light : DirectionalLightToRender) {
+    push_context,defer_pop g_context;
 }
 
-DirectionalLightToRender :: struct {
-    direction : Vector3;
-    color : Vector3;
-    intensity : float;
-}
-
-PointLightToRender :: struct {
-    position : Vector3;
-    color : Vector3;
-    intensity : float;
+AddPointLightToRender :: (light : PointLightToRender) {
+    push_context,defer_pop g_context;
 }
