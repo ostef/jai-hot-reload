@@ -3,79 +3,21 @@
 #import "File";
 #import "Compiler";
 
-GlobalPersistent :: struct {
-    identifier : string;
-    type : *Type_Info_Struct;
-}
-
-g_global_persistent_generated : bool;
-g_global_persistent : [..]GlobalPersistent;
-
-HandleDeclarationForGlobalPersistent :: (decl : *Code_Declaration) {
-    struct_type : *Type_Info_Struct;
-    location := make_location(decl);
-    if decl.expression && decl.expression.kind == .STRUCT {
-        struct_type = cast(*Code_Struct, decl.expression).defined_type;
-    } else {
-        return;
+BuildModule :: (name : string, source_file : string, handle_compiler_message : (*Message)) {
+    start_time := current_time_monotonic();
+    defer {
+        end_time := current_time_monotonic();
+        total_time := end_time - start_time;
+        print("  Compiled module % in % seconds\n", name, to_float64_seconds(total_time));
     }
 
-    for note : decl.notes {
-        if starts_with(note.text, "GlobalPersistent") {
-            str := advance(note.text, "GlobalPersistent".count);
-            if str.count == 0 {
-                array_add(*g_global_persistent, .{type=struct_type});
-            } else {
-                if str[0] != #char "(" || str[str.count - 1] != #char ")" {
-                    compiler_report("Invalid @GlobalPersistent note", location);
-                }
-
-                advance(*str);
-                str.count -= 1;
-
-                array_add(*g_global_persistent, .{identifier=str, type=struct_type});
-            }
-        }
-    }
-}
-
-GenerateGlobalPersistentCode :: (workspace : Workspace) {
-    #import "Sort";
-
-    if g_global_persistent_generated {
-        return;
-    }
-
-    defer g_global_persistent_generated = true;
-
-    // Make sure things always get generated in the same order
-    quick_sort(g_global_persistent, (a : GlobalPersistent, b : GlobalPersistent) -> int {
-        cmp := compare_strings(a.type.name, b.type.name);
-        if cmp == 0 {
-            cmp = compare_strings(a.identifier, b.identifier);
-        }
-
-        return cmp;
-    });
-
-    builder : String_Builder;
-    print_to_builder(*builder, "Global_Persistent :: GlobalPersistent.[\n");
-    for g_global_persistent {
-        print_to_builder(*builder, "    .{identifier=\"%\", type=%},\n", it.identifier, get_type(it.type));
-    }
-    print_to_builder(*builder, "];\n");
-
-    add_build_string(builder_to_string(*builder), workspace);
-}
-
-BuildGame :: () {
-    ws := compiler_create_workspace("Game");
+    ws := compiler_create_workspace(name);
 
     options := get_build_options(ws);
     options.output_type = .DYNAMIC_LIBRARY;
     make_directory_if_it_does_not_exist("Libs");
     options.output_path = "Libs";
-    options.output_executable_name = "game";
+    options.output_executable_name = name;
     options.import_path = get_build_options().import_path;
     options.Commonly_Propagated = get_build_options().Commonly_Propagated;
     options.write_added_strings = true;
@@ -85,29 +27,15 @@ BuildGame :: () {
 
     compiler_begin_intercept(ws);
 
-    add_build_file("game.jai", ws);
+    add_build_file(source_file, ws);
 
     while true {
         msg := compiler_wait_for_message();
+        if handle_compiler_message && msg.workspace == ws {
+            handle_compiler_message(msg);
+        }
 
-        if msg.kind == {
-        case .TYPECHECKED;
-            typechecked := cast(*Message_Typechecked, msg);
-            for typechecked.declarations {
-                decl := it.expression;
-                if !decl {
-                    continue;
-                }
-
-                HandleDeclarationForGlobalPersistent(decl);
-            }
-
-        case .PHASE;
-            phase := cast(*Message_Phase, msg);
-            if phase.phase == .TYPECHECKED_ALL_WE_CAN {
-                GenerateGlobalPersistentCode(msg.workspace);
-            }
-        case .COMPLETE;
+        if msg.kind == .COMPLETE {
             break;
         }
     }
@@ -115,12 +43,19 @@ BuildGame :: () {
     compiler_end_intercept(ws);
 }
 
-BuildLoader :: () {
-    ws := compiler_create_workspace("Loader");
+BuildCoreLoader :: () {
+    start_time := current_time_monotonic();
+    defer {
+        end_time := current_time_monotonic();
+        total_time := end_time - start_time;
+        print("  Compiled loader in % seconds\n", to_float64_seconds(total_time));
+    }
+
+    ws := compiler_create_workspace("Core");
 
     options := get_build_options(ws);
     options.output_type = .EXECUTABLE;
-    options.output_executable_name = "Game";
+    options.output_executable_name = "main";
     options.import_path = get_build_options().import_path;
     options.Commonly_Propagated = get_build_options().Commonly_Propagated;
     options.write_added_strings = true;
@@ -130,13 +65,15 @@ BuildLoader :: () {
 
     compiler_begin_intercept(ws);
 
-    add_build_file("loader.jai", ws);
+    add_build_file("Source/main.jai", ws);
 
     while true {
         msg := compiler_wait_for_message();
+        // if msg.workspace == ws {
+        //     CoreHandleCompilerMessage(msg);
+        // }
 
-        if msg.kind == {
-        case .COMPLETE;
+        if msg.kind == .COMPLETE {
             break;
         }
     }
@@ -145,35 +82,55 @@ BuildLoader :: () {
 }
 
 Build :: () {
+    start_time := current_time_monotonic();
+    defer {
+        end_time := current_time_monotonic();
+        total_time := end_time - start_time;
+        print("  Total time: % seconds\n", to_float64_seconds(total_time));
+    }
+
     set_build_options_dc(.{do_output=false, write_added_strings=false});
 
     args := get_build_options().compile_time_command_line;
     arg_index := 0;
 
-    build_loader : bool;
+    build_core : bool;
+    build_renderer : bool;
     build_game : bool;
 
     while arg_index < args.count {
         defer arg_index += 1;
 
         if args[arg_index] == {
-        case "-loader";
-            build_loader = true;
+        case "-core";
+            build_core = true;
+        case "-renderer";
+            build_renderer = true;
         case "-game";
             build_game = true;
-
+        case "-all";
+            build_core = true;
+            build_renderer = true;
+            build_game = true;
         case;
             log_error("Unknown argument '%'.", args[arg_index]);
             exit(1);
         }
     }
 
-    if build_loader {
-        BuildLoader();
+    if !build_core && !build_renderer && !build_game {
+        log_error("Nothing to build");
+        exit(1);
     }
 
+    if build_core {
+        BuildCoreLoader();
+    }
+    if build_renderer {
+        BuildModule("Renderer", "Source/Renderer/renderer_module.jai", null);
+    }
     if build_game {
-        BuildGame();
+        BuildModule("Game", "Source/Game/game_module.jai", null);
     }
 }
 
