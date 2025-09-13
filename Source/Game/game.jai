@@ -4,18 +4,21 @@
 #load "../Renderer/API/renderer.jai";
 #load "API/game.jai";
 
+#load "entity.jai";
+
 Module_ID :: ModuleID.Game;
 
 g_context : #Context;
 
 g_module := GameModule.{
-    Initialize=InitializeGame,
-    Shutdown=ShutdownGame,
-    MainLoop=GameLoop,
-    SaveState=SaveState,
-    LoadState=LoadState,
-    OnModuleLoad=OnModuleLoad,
-    OnModuleUnload=OnModuleUnload,
+    base.Initialize=InitializeGame,
+    base.Shutdown=ShutdownGame,
+    base.MainLoop=GameLoop,
+    base.SaveState=SaveState,
+    base.LoadState=LoadState,
+    base.OnModuleLoad=OnModuleLoad,
+    base.OnModuleUnload=OnModuleUnload,
+
     world.UpdateWorld=UpdateWorld,
     world.SubmitToRenderer=SubmitToRenderer,
 };
@@ -48,8 +51,12 @@ ModuleHandshake :: (core : *CoreModule) -> *Module #c_call {
 
     g_core = core;
     g_renderer = xx GetModule(.Renderer);
+    InitializeEntityVTables(*g_module);
+
     return *g_module;
 }
+
+g_world : World;
 
 InitializeGame :: () {
     push_context,defer_pop g_context;
@@ -57,6 +64,8 @@ InitializeGame :: () {
 
 ShutdownGame :: () {
     push_context,defer_pop g_context;
+
+    DestroyWorld(*g_world);
 }
 
 DestroyWorld :: (world : *World) {
@@ -65,6 +74,9 @@ DestroyWorld :: (world : *World) {
 
 GameLoop :: () {
     push_context,defer_pop g_context;
+
+    UpdateWorld(*g_world);
+    SubmitToRenderer(*g_world);
 }
 
 UpdateWorld :: (world : *World) {
@@ -73,6 +85,8 @@ UpdateWorld :: (world : *World) {
 
 SubmitToRenderer :: (world : *World) {
     push_context,defer_pop g_context;
+
+    WaitForRenderThread();
 }
 
 SaveState :: () -> []u8 {

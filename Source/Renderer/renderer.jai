@@ -6,9 +6,9 @@
 Module_ID :: ModuleID.Renderer;
 
 g_module := RendererModule.{
-    Initialize=InitializeRenderer,
-    Shutdown=ShutdownRenderer,
-    OnModuleLoad=OnModuleLoad,
+    base.Initialize=InitializeRenderer,
+    base.Shutdown=ShutdownRenderer,
+    base.OnModuleLoad=OnModuleLoad,
 
     WaitForRenderThread=WaitForRenderThread,
     AddMeshToRender=AddMeshToRender,

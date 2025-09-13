@@ -27,7 +27,7 @@ Module :: struct {
 ModuleHandshakeProc :: #type (core : *CoreModule) -> *Module #c_call;
 
 CoreModule :: struct {
-    #as using _ : Module;
+    #as base : Module;
 
     Quit : ();
     GetModule : (id : ModuleID) -> *Module;
@@ -38,36 +38,9 @@ CoreModule :: struct {
 
 #if Module_ID != .Core {
 
-g_core : *CoreModule;
-
-Quit :: inline () {
-    assert(g_core != null, "Core module is null");
-
-    g_core.Quit();
-}
-
-GetModule :: inline (id : ModuleID) -> *Module {
-    assert(g_core != null, "Core module is null");
-
-    return g_core.GetModule(id);
-}
-
-GetWindow :: inline () -> *SDL_Window {
-    assert(g_core != null, "Core module is null");
-
-    return g_core.GetWindow();
-}
-
-GetGfxContext :: inline () -> *GfxContext {
-    assert(g_core != null, "Core module is null");
-
-    return g_core.GetGfxContext();
-}
-
-GetAssets :: inline () -> *Assets {
-    assert(g_core != null, "Core module is null");
-
-    return g_core.GetAssets();
+#insert -> string {
+    dummy : *CoreModule; // Make sure the compiler understands that we want to wait on CoreModule
+    return "using,except(base) g_core : *CoreModule;";
 }
 
 }

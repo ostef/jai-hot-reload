@@ -3,9 +3,9 @@
 Module_ID :: ModuleID.Core;
 
 g_module := CoreModule.{
-    Initialize=InitializeCore,
-    Shutdown=ShutdownCore,
-    MainLoop=CoreLoop,
+    base.Initialize=InitializeCore,
+    base.Shutdown=ShutdownCore,
+    base.MainLoop=CoreLoop,
     Quit=Quit,
     GetModule=GetModule,
     GetWindow=GetWindow,

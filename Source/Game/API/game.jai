@@ -2,18 +2,19 @@
 
 #load "world.jai";
 #load "entity.jai";
-#load "component.jai";
 
 GameModule :: struct {
-    #as using _ : Module;
+    #as base : Module;
 
     world : WorldAPI;
     entity : EntityAPI;
-    component : ComponentAPI;
 }
 
 #if Module_ID != .Game {
 
-g_game : *GameModule;
+#insert -> string {
+    dummy : *GameModule;
+    return "using,except(base) g_game : *GameModule;";
+}
 
 }

@@ -1,7 +1,7 @@
 #import "Math";
 
 RendererModule :: struct {
-    #as using _ : Module;
+    #as base : Module;
 
     WaitForRenderThread : ();
     AddMeshToRender : (mesh : MeshToRender);
@@ -11,31 +11,7 @@ RendererModule :: struct {
 
 #if Module_ID != .Renderer {
 
-g_renderer : *RendererModule;
-
-WaitForRenderThread :: inline () {
-    assert(g_renderer != null, "Renderer module is null");
-
-    g_renderer.WaitForRenderThread();
-}
-
-AddMeshToRender :: inline (mesh : MeshToRender) {
-    assert(g_renderer != null, "Renderer module is null");
-
-    g_renderer.AddMeshToRender(mesh);
-}
-
-AddDirectionalLightToRender :: inline (light : DirectionalLightToRender) {
-    assert(g_renderer != null, "Renderer module is null");
-
-    g_renderer.AddDirectionalLightToRender(light);
-}
-
-AddPointLightToRender :: inline (light : PointLightToRender) {
-    assert(g_renderer != null, "Renderer module is null");
-
-    g_renderer.AddPointLightToRender(light);
-}
+using,except(base) g_renderer : *RendererModule;
 
 }
 

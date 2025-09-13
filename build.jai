@@ -188,13 +188,14 @@ Build :: () {
 
     // Compare file times so we know if we should rebuild a module
     if auto_detect {
-        build_core     ||= CompareFileTimes("main", "Source/Core") || CompareFileTimes("main", "Source/main.jai");
-        build_renderer ||= CompareFileTimes(Renderer_Lib_File, "Source/Renderer");
-        build_game     ||= CompareFileTimes(Game_Lib_File, "Source/Game");
+        build_core ||= CompareFileTimes("main", "Source/Core") || CompareFileTimes("main", "Source/main.jai");
 
+        build_renderer ||= CompareFileTimes(Renderer_Lib_File, "Source/Renderer");
         for Renderer_Module_Dependencies {
             build_renderer ||= CompareFileTimes(Renderer_Lib_File, it);
         }
+
+        build_game     ||= CompareFileTimes(Game_Lib_File, "Source/Game");
         for Game_Module_Dependencies {
             build_game ||= CompareFileTimes(Game_Lib_File, it);
         }
