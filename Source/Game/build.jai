@@ -1,5 +1,10 @@
 #load "Build/entity.jai";
 
+Game_Module_Dependencies :: string.[
+    "Source/Core/API",
+    "Source/Renderer/API",
+];
+
 HandleCompilerMessageForGame :: (msg : *Message) {
     HandleCompilerMessageForCore(msg);
 

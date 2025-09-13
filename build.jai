@@ -6,6 +6,7 @@
 
 #load "Source/Core/build.jai";
 #load "Source/Game/build.jai";
+#load "Source/Renderer/build.jai";
 
 Max_Workspaces :: 20;
 
@@ -14,6 +15,9 @@ case .WINDOWS; Lib_Ext :: "dll";
 case .LINUX;   Lib_Ext :: "so";
 case .MACOS;   Lib_Ext :: "dylib";
 }
+
+Renderer_Lib_File :: #run sprint("Libs/Renderer.%", Lib_Ext);
+Game_Lib_File     :: #run sprint("Libs/Game.%", Lib_Ext);
 
 BuildModule :: (name : string, source_file : string, handle_compiler_message : (*Message) = null) {
     compilation_failed := false;
@@ -185,15 +189,22 @@ Build :: () {
     // Compare file times so we know if we should rebuild a module
     if auto_detect {
         build_core     ||= CompareFileTimes("main", "Source/Core") || CompareFileTimes("main", "Source/main.jai");
-        build_renderer ||= CompareFileTimes(tprint("Libs/Renderer.%", Lib_Ext), "Source/Renderer");
-        build_game     ||= CompareFileTimes(tprint("Libs/Game.%", Lib_Ext), "Source/Game");
+        build_renderer ||= CompareFileTimes(Renderer_Lib_File, "Source/Renderer");
+        build_game     ||= CompareFileTimes(Game_Lib_File, "Source/Game");
+
+        for Renderer_Module_Dependencies {
+            build_renderer ||= CompareFileTimes(Renderer_Lib_File, it);
+        }
+        for Game_Module_Dependencies {
+            build_game ||= CompareFileTimes(Game_Lib_File, it);
+        }
     }
 
     if build_core {
         BuildCoreLoader();
     }
     if build_renderer {
-        BuildModule("Renderer", "Source/Renderer/renderer.jai", HandleCompilerMessageForCore);
+        BuildModule("Renderer", "Source/Renderer/renderer.jai", HandleCompilerMessageForRenderer);
     }
     if build_game {
         BuildModule("Game", "Source/Game/game.jai", HandleCompilerMessageForGame);
